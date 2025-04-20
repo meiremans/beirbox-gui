@@ -4,14 +4,14 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
-	xkcd "github.com/meiremans/beirbox-gui/GUI"
+	"github.com/meiremans/beirbox-GUI/GUI"
 )
 
 func main() {
 	a := app.New()
-	w := a.NewWindow("xkcd Viewer")
+	w := a.NewWindow("beirbox")
 
-	ui := xkcd.Show(w)
+	ui := GUI.Show(w)
 	w.SetContent(container.NewMax(ui))
 	w.Resize(fyne.NewSize(800, 600))
 

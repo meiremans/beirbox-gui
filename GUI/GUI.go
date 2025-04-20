@@ -1,4 +1,4 @@
-package track
+package GUI
 
 import (
 	"fmt"
@@ -16,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/meiremans/beirbox-GUI/PDB"
 )
 
 // Track holds information about a music track
@@ -37,6 +38,10 @@ func NewTrack() *Track {
 	return &Track{
 		labels: make(map[string]*widget.Label),
 	}
+}
+
+func export() {
+	PDB.PDB()
 }
 
 // UpdateTrackInfo will update the UI with track details
@@ -110,6 +115,10 @@ func Show(win fyne.Window) fyne.CanvasObject {
 
 	form := t.NewForm(win)
 
+	export := widget.NewButton("export", func() {
+		export()
+	})
+
 	submit := widget.NewButton("Submit", func() {
 		t.UpdateTrackInfo()
 	})
@@ -121,6 +130,7 @@ func Show(win fyne.Window) fyne.CanvasObject {
 			t.UpdateTrackInfo()
 		}),
 		submit,
+		export,
 	)
 
 	// Optional: load a track at startup
