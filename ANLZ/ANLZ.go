@@ -1,15 +1,15 @@
 package ANLZ
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
-func ANLZ() {
+func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
 	// Get the absolute path to the current directory
 	currentDir, err := filepath.Abs(".")
 	if err != nil {
@@ -29,38 +29,8 @@ func ANLZ() {
 		fmt.Printf("Error running Node.js script: %s\n", err)
 	}
 	fmt.Printf("Output: %s\n", output)
-
-	// Load rainbowtable.json
-	rainbowPath := filepath.Join(currentDir, "rainbowtable", "rainbowtable.json")
-	rainbowData, err := os.ReadFile(rainbowPath)
-	if err != nil {
-		fmt.Printf("Failed to read rainbowtable.json: %v", err)
-		return
-	}
-
-	var rainbow map[string]string
-	if err := json.Unmarshal(rainbowData, &rainbow); err != nil {
-		fmt.Printf("Failed to parse rainbowtable.json: %v\n", err)
-		return
-	}
-
-	// Try to find the destination path using the known source file path
-	sourceMP3 := "Contents/UnknownArtist/UnknownAlbum/a.mp3" // <- You could parametrize this later
-
-	var destinationKey string
-	for key, value := range rainbow {
-		if value == sourceMP3 {
-			destinationKey = key
-			break
-		}
-	}
-
-	if destinationKey == "" {
-		fmt.Printf("No matching DAT path found in rainbowtable for '%s'\n", sourceMP3)
-		return
-	}
-
-	destPath := filepath.Join(currentDir, destinationKey)
+	destinationKey := getFolderName(filepath.Join(musicFolderOnUsb, "testsong.mp3"))
+	destPath := filepath.Join(currentDir, "PIONEER", "USBANLZ", destinationKey)
 	fmt.Printf("Copying to: %s\n", destPath)
 
 	// Ensure output directory exists
@@ -96,6 +66,8 @@ func ANLZ() {
 }
 
 func getFolderName(filename string) string {
+	// Replace all backslashes with forward slashes
+	filename = strings.ReplaceAll(filename, "\\", "/")
 	var hash uint32 = 0
 	for _, c := range filename {
 		hash = hash*0x34F5501D + uint32(c)*0x93B6

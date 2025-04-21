@@ -24,6 +24,9 @@ import (
 	"github.com/meiremans/beirbox-GUI/PDB"
 )
 
+var musicFolderOnUSB = "/music"
+var musicFolderOnDisk = "C:/beirbox" //TODO: make settings file and save
+
 // Track holds information about a music track
 type Track struct {
 	Artist     string `json:"artist"`
@@ -96,16 +99,17 @@ func NewTrack() *Track {
 	}
 }
 
-func export(selectedUSB string, window fyne.Window) {
+func export(selectedUSB string, selectedLocalFolder string, window fyne.Window) {
 
 	usbPath := selectedUSB // e.g., "E:\\"
 	if usbPath != "" {
-		err := copyDir("music", filepath.Join(usbPath, "music"))
+		// Copy files from the selected local folder to the USB
+		err := copyDir(selectedLocalFolder, filepath.Join(usbPath, "music"))
 		if err != nil {
 			fmt.Println("Error copying music:", err)
 		}
-		ANLZ.ANLZ()
-		PDB.PDB()
+		ANLZ.ANLZ(musicFolderOnUSB, musicFolderOnDisk)
+		PDB.PDB(musicFolderOnUSB, musicFolderOnDisk)
 
 		err = copyDir("PIONEER", filepath.Join(usbPath, "PIONEER"))
 		if err != nil {
@@ -114,8 +118,20 @@ func export(selectedUSB string, window fyne.Window) {
 	} else {
 		dialog.ShowInformation("No USB Selected", "Please select a USB drive first.", window)
 	}
-
 }
+
+func selectFolder(window fyne.Window) string {
+	// Open a folder selection dialog
+	dialog.ShowFolderOpen(func(folder fyne.ListableURI, err error) {
+		if err == nil && folder != nil {
+			// Store the selected folder's URI as a string
+			fmt.Println("Selected folder:", folder.Path())
+			musicFolderOnDisk = folder.Path()
+		}
+	}, window)
+	return ""
+}
+
 func copyDir(src, dst string) error {
 	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -229,8 +245,16 @@ func Show(win fyne.Window) fyne.CanvasObject {
 	form := t.NewForm(win)
 	usb := NewUSBSelector() // <- new USB selector
 
+	// Add the folder select button
+	selectFolderButton := widget.NewButton("Select Local Folder", func() {
+		localFolder := selectFolder(win)
+		if localFolder != "" {
+			fmt.Println("Local folder selected:", localFolder)
+		}
+	})
+
 	export := widget.NewButton("export", func() {
-		export(usb.Selected, win)
+		export(usb.Selected, "./music", win)
 		fmt.Println("Export to USB:", usb.Selected)
 	})
 
@@ -255,7 +279,7 @@ func Show(win fyne.Window) fyne.CanvasObject {
 	// Compose layout
 	return container.NewBorder(
 		form,
-		container.NewVBox(buttons, usb.Render()),
+		container.NewVBox(buttons, usb.Render(), selectFolderButton),
 		nil,
 		nil,
 		t.image,

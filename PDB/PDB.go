@@ -25,7 +25,7 @@ func ptrToNow() *time.Time {
 	return &now
 }
 
-func PDB() error {
+func PDB(musicFolderOnUSB string, musicFolderOnDisk string) error {
 	var err error
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -34,7 +34,7 @@ func PDB() error {
 
 	// Initialize options
 	basedir := flag.String("root", "./", "Root path of USB drive")
-	trackDir := flag.String("trackdir", "Contents/UnknownArtist/UnknownAlbum", "Where on the USB drive to put exported files, relative to root path")
+	trackDir := flag.String("trackdir", musicFolderOnUSB, "Where on the USB drive to put exported files, relative to root path")
 	forceOverwrite := flag.Bool("f", false, "Overwrite export file if it exists")
 	flag.Parse()
 
@@ -75,7 +75,7 @@ func PDB() error {
 	}
 	defer out.Close()
 	fmt.Printf("PIONEER database created: %s\n", outputFile)
-	filePath := "./musiclibrary/testsong.mp3"
+	filePath := filepath.Join(musicFolderOnDisk, "testsong.mp3")
 	// Use os.Stat to get the file information
 	fileInfo, err := os.Stat(filePath)
 
@@ -131,7 +131,7 @@ func PDB() error {
 	tracks := lib.Tracks().All()
 	for i := range tracks {
 		pdbtrack := mediascanner.PdbTrack(lib, tracks[i], *basedir)
-		pdbtrack.FilePath = "/Contents/UnknownArtist/UnknownAlbum/a.mp3" //yeah lets force unix style
+		pdbtrack.FilePath = fmt.Sprintf("/%s/testsong.mp3", musicFolderOnUSB) //yeah lets force unix style.
 		inserts = append(inserts, Insert{
 			Type: page.Type_Tracks,
 			Row:  &pdbtrack,
