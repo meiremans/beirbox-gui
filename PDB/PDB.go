@@ -34,7 +34,7 @@ func PDB() error {
 
 	// Initialize options
 	basedir := flag.String("root", "./", "Root path of USB drive")
-	trackDir := flag.String("trackdir", "music", "Where on the USB drive to put exported files, relative to root path")
+	trackDir := flag.String("trackdir", "Contents/UnknownArtist/UnknownAlbum", "Where on the USB drive to put exported files, relative to root path")
 	forceOverwrite := flag.Bool("f", false, "Overwrite export file if it exists")
 	flag.Parse()
 
@@ -131,7 +131,7 @@ func PDB() error {
 	tracks := lib.Tracks().All()
 	for i := range tracks {
 		pdbtrack := mediascanner.PdbTrack(lib, tracks[i], *basedir)
-		pdbtrack.FilePath = "/music/testsong.mp3" //yeah lets force unix style
+		pdbtrack.FilePath = "/Contents/UnknownArtist/UnknownAlbum/a.mp3" //yeah lets force unix style
 		inserts = append(inserts, Insert{
 			Type: page.Type_Tracks,
 			Row:  &pdbtrack,

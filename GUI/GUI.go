@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/meiremans/beirbox-GUI/ANLZ"
@@ -95,7 +96,7 @@ func NewTrack() *Track {
 	}
 }
 
-func export(selectedUSB string) {
+func export(selectedUSB string, window fyne.Window) {
 
 	usbPath := selectedUSB // e.g., "E:\\"
 	if usbPath != "" {
@@ -110,6 +111,8 @@ func export(selectedUSB string) {
 		if err != nil {
 			fmt.Println("Error copying PIONEER:", err)
 		}
+	} else {
+		dialog.ShowInformation("No USB Selected", "Please select a USB drive first.", window)
 	}
 
 }
@@ -227,7 +230,7 @@ func Show(win fyne.Window) fyne.CanvasObject {
 	usb := NewUSBSelector() // <- new USB selector
 
 	export := widget.NewButton("export", func() {
-		export(usb.Selected)
+		export(usb.Selected, win)
 		fmt.Println("Export to USB:", usb.Selected)
 	})
 

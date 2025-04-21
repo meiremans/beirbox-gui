@@ -1,6 +1,7 @@
 package ANLZ
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -16,34 +17,60 @@ func ANLZ() {
 		return
 	}
 
-	// Define the path to the Node.js script relative to the current directory
+	// Path to the Node.js script
 	scriptPath := filepath.Join(currentDir, "ANLZ", "node", "analyseNewTrack.js")
 
-	// Create the command
+	// Run the script
 	cmd := exec.Command("C:\\Program Files\\nodejs\\node", scriptPath)
+	cmd.Dir = filepath.Join(currentDir, "ANLZ", "node")
 
-	// Set the working directory to the folder containing the Node.js script
-	cmd.Dir = filepath.Join(currentDir, "ANLZ/node")
-
-	// Capture standard output and standard error
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Print the error if there was one
-		fmt.Printf("Error: %s\n", err)
+		fmt.Printf("Error running Node.js script: %s\n", err)
 	}
-
-	// Print the output (both stdout and stderr combined)
 	fmt.Printf("Output: %s\n", output)
 
-	// Copy reconstructed.anlz to ../output/reconstructed.DAT
-	srcPath := filepath.Join(currentDir, "ANLZ", "node", "reconstructed.anlz")
-	destPath := filepath.Join(currentDir, "PIONEER", "USBANLZ", "P036", "00006A74", "ANLZ0000.DAT")
+	// Load rainbowtable.json
+	rainbowPath := filepath.Join(currentDir, "rainbowtable", "rainbowtable.json")
+	rainbowData, err := os.ReadFile(rainbowPath)
+	if err != nil {
+		fmt.Printf("Failed to read rainbowtable.json: %v", err)
+		return
+	}
+
+	var rainbow map[string]string
+	if err := json.Unmarshal(rainbowData, &rainbow); err != nil {
+		fmt.Printf("Failed to parse rainbowtable.json: %v\n", err)
+		return
+	}
+
+	// Try to find the destination path using the known source file path
+	sourceMP3 := "Contents/UnknownArtist/UnknownAlbum/a.mp3" // <- You could parametrize this later
+
+	var destinationKey string
+	for key, value := range rainbow {
+		if value == sourceMP3 {
+			destinationKey = key
+			break
+		}
+	}
+
+	if destinationKey == "" {
+		fmt.Printf("No matching DAT path found in rainbowtable for '%s'\n", sourceMP3)
+		return
+	}
+
+	destPath := filepath.Join(currentDir, destinationKey)
+	fmt.Printf("Copying to: %s\n", destPath)
 
 	// Ensure output directory exists
 	if err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
 		fmt.Printf("Failed to create output directory: %v\n", err)
 		return
 	}
+
+	// Copy reconstructed.anlz to the final destination
+	srcPath := filepath.Join(currentDir, "ANLZ", "node", "reconstructed.anlz")
 
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
@@ -65,5 +92,5 @@ func ANLZ() {
 		return
 	}
 
-	fmt.Println("File copied successfully to output/USBANLZ0000.DAT.")
+	fmt.Println("File copied successfully to:", destinationKey)
 }
