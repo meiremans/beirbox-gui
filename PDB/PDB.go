@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ambientsound/rex/pkg/library"
@@ -18,6 +19,8 @@ import (
 	"github.com/ambientsound/rex/pkg/rekordbox/pdb"
 	"github.com/ambientsound/rex/pkg/rekordbox/unknown17"
 	"github.com/ambientsound/rex/pkg/rekordbox/unknown18"
+
+	"github.com/dhowden/tag"
 )
 
 func ptrToNow() *time.Time {
@@ -75,33 +78,8 @@ func PDB(musicFolderOnUSB string, musicFolderOnDisk string) error {
 	}
 	defer out.Close()
 	fmt.Printf("PIONEER database created: %s\n", outputFile)
-	filePath := filepath.Join(musicFolderOnDisk, "testsong.mp3")
-	// Use os.Stat to get the file information
-	fileInfo, err := os.Stat(filePath)
 
-	// Get the file size in bytes
-	fileSize := fileInfo.Size()
-
-	myTrack := &library.Track{
-		Path:        filePath,
-		Bitrate:     320,   // FIXME
-		Tempo:       128,   // FIXME
-		SampleDepth: 16,    // FIXME
-		SampleRate:  44100, // FIXME
-		DiscNumber:  0,     // FIXME
-		Isrc:        "",    // FIXME
-		FileSize:    int(fileSize),
-		TrackNumber: 1,
-		ReleaseDate: ptrToNow(),
-		AddedDate:   ptrToNow(),
-		Artist:      "fluitenden beir",
-		Album:       "pompen",
-		Duration:    time.Duration(13 * time.Second),
-		Title:       "zingenden das",
-		FileType:    "mp3",
-	}
-
-	lib.InsertTrack(myTrack)
+	insertAllTracks(musicFolderOnDisk, lib)
 
 	fmt.Printf("Tracks marked for export: %6d used/%6d total\n", len(lib.Tracks().All()), 1)
 	fmt.Printf("Copying or encoding tracks to %s\n", *trackDir)
@@ -131,7 +109,8 @@ func PDB(musicFolderOnUSB string, musicFolderOnDisk string) error {
 	tracks := lib.Tracks().All()
 	for i := range tracks {
 		pdbtrack := mediascanner.PdbTrack(lib, tracks[i], *basedir)
-		pdbtrack.FilePath = fmt.Sprintf("/%s/testsong.mp3", musicFolderOnUSB) //yeah lets force unix style.
+		filename := filepath.Base(tracks[i].Path)
+		pdbtrack.FilePath = fmt.Sprintf("/%s/%s", musicFolderOnUSB, filename)
 		inserts = append(inserts, Insert{
 			Type: page.Type_Tracks,
 			Row:  &pdbtrack,
@@ -237,4 +216,45 @@ func PDB(musicFolderOnUSB string, musicFolderOnDisk string) error {
 	}
 
 	return nil
+}
+func insertAllTracks(musicFolderOnDisk string, lib *library.Library) error {
+	return filepath.Walk(musicFolderOnDisk, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		meta, err := tag.ReadFrom(f)
+		if err != nil {
+			return err
+		}
+		trackNum, _ := meta.Track()
+		fileSize := info.Size()
+		myTrack := &library.Track{
+			Path:        path,
+			FileSize:    int(fileSize),
+			Bitrate:     320, // You may calculate or parse this if needed
+			SampleDepth: 16,  // Typically 16-bit for MP3
+			SampleRate:  44100,
+			Tempo:       128, // If unknown, default or estimate
+			DiscNumber:  0,
+			Isrc:        "",
+			TrackNumber: trackNum,
+			ReleaseDate: ptrToNow(),
+			AddedDate:   ptrToNow(),
+			Artist:      meta.Artist(),
+			Album:       meta.Album(),
+			Duration:    time.Duration(0), // Not all tag readers include duration
+			Title:       meta.Title(),
+			FileType:    strings.TrimPrefix(filepath.Ext(path), "."),
+		}
+
+		lib.InsertTrack(myTrack)
+		return nil
+	})
 }

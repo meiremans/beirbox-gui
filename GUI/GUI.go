@@ -22,10 +22,22 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/meiremans/beirbox-GUI/ANLZ"
 	"github.com/meiremans/beirbox-GUI/PDB"
+	"github.com/meiremans/beirbox-GUI/data"
 )
 
 var musicFolderOnUSB = "/music"
-var musicFolderOnDisk = "C:/beirbox" //TODO: make settings file and save
+var musicFolderOnDisk string
+
+func init() {
+	// Load settings when the program starts
+	settings, err := data.LoadSettings()
+	if err != nil {
+		log.Printf("Failed to load settings: %v\n", err)
+		musicFolderOnDisk = "C:/beirbox" // Fallback
+	} else {
+		musicFolderOnDisk = settings.MusicFolder
+	}
+}
 
 // Track holds information about a music track
 type Track struct {
@@ -127,6 +139,7 @@ func selectFolder(window fyne.Window) string {
 			// Store the selected folder's URI as a string
 			fmt.Println("Selected folder:", folder.Path())
 			musicFolderOnDisk = folder.Path()
+			updateMusicFolder(musicFolderOnDisk)
 		}
 	}, window)
 	return ""
@@ -272,6 +285,16 @@ func Show(win fyne.Window) fyne.CanvasObject {
 		export,
 	)
 
+	// Add the BeirBox image
+	beirBoxImage := canvas.NewImageFromFile("./static/beirbox.png")
+	beirBoxImage.FillMode = canvas.ImageFillContain // or ImageFillOriginal depending on your needs
+
+	// Create a container for the main content (image + track image)
+	content := container.NewStack(
+		beirBoxImage,
+		t.image,
+	)
+
 	go func() {
 		t.UpdateTrackInfo()
 	}()
@@ -282,6 +305,21 @@ func Show(win fyne.Window) fyne.CanvasObject {
 		container.NewVBox(buttons, usb.Render(), selectFolderButton),
 		nil,
 		nil,
-		t.image,
+		content, // Use the stacked container instead of just t.image
 	)
+}
+
+func updateMusicFolder(newPath string) {
+	settings, err := data.LoadSettings()
+	if err != nil {
+		log.Printf("Error loading settings: %v\n", err)
+		return
+	}
+
+	settings.MusicFolder = newPath
+	if err := data.SaveSettings(settings); err != nil {
+		log.Printf("Error saving settings: %v\n", err)
+	} else {
+		musicFolderOnDisk = newPath // Update in-memory variable
+	}
 }
