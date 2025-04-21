@@ -94,3 +94,15 @@ func ANLZ() {
 
 	fmt.Println("File copied successfully to:", destinationKey)
 }
+
+func getFolderName(filename string) string {
+	var hash uint32 = 0
+	for _, c := range filename {
+		hash = hash*0x34F5501D + uint32(c)*0x93B6
+	}
+
+	part2 := hash % 0x30D43
+	part1 := ((((part2>>2&0x4000|(part2&0x2000))>>3|(part2&0x200))>>1|(part2&0xC0))>>3|(part2&0x4))>>1 | (part2 & 0x1)
+
+	return fmt.Sprintf("P%03X/%08X", part1, part2)
+}
