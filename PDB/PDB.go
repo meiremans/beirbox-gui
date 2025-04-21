@@ -131,7 +131,7 @@ func PDB() error {
 	tracks := lib.Tracks().All()
 	for i := range tracks {
 		pdbtrack := mediascanner.PdbTrack(lib, tracks[i], *basedir)
-		pdbtrack.FilePath = "/rex/testsong.mp3" //yeah lets force unix style
+		pdbtrack.FilePath = "/music/testsong.mp3" //yeah lets force unix style
 		inserts = append(inserts, Insert{
 			Type: page.Type_Tracks,
 			Row:  &pdbtrack,

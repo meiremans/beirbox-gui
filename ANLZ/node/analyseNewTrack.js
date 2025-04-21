@@ -295,4 +295,4 @@ function writeNewTrack (filePathOnUsb){
     rebuildAnlzFile(parsed, './reconstructed.anlz');
     parseAnlzFile("./reconstructed.anlz");
 }
-writeNewTrack("/USB/NEWTRACK.mp3");
+writeNewTrack("/music/testsong.mp3");

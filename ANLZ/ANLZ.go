@@ -1,4 +1,4 @@
-package main
+package ANLZ
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-func main() {
+func ANLZ() {
 	// Get the absolute path to the current directory
 	currentDir, err := filepath.Abs(".")
 	if err != nil {
@@ -17,13 +17,13 @@ func main() {
 	}
 
 	// Define the path to the Node.js script relative to the current directory
-	scriptPath := filepath.Join(currentDir, "node", "analyseNewTrack.js")
+	scriptPath := filepath.Join(currentDir, "ANLZ", "node", "analyseNewTrack.js")
 
 	// Create the command
 	cmd := exec.Command("C:\\Program Files\\nodejs\\node", scriptPath)
 
 	// Set the working directory to the folder containing the Node.js script
-	cmd.Dir = filepath.Join(currentDir, "node")
+	cmd.Dir = filepath.Join(currentDir, "ANLZ/node")
 
 	// Capture standard output and standard error
 	output, err := cmd.CombinedOutput()
@@ -36,8 +36,8 @@ func main() {
 	fmt.Printf("Output: %s\n", output)
 
 	// Copy reconstructed.anlz to ../output/reconstructed.DAT
-	srcPath := filepath.Join(currentDir, "node", "reconstructed.anlz")
-	destPath := filepath.Join(currentDir, "output", "reconstructed.DAT")
+	srcPath := filepath.Join(currentDir, "ANLZ", "node", "reconstructed.anlz")
+	destPath := filepath.Join(currentDir, "PIONEER", "USBANLZ", "P036", "00006A74", "ANLZ0000.DAT")
 
 	// Ensure output directory exists
 	if err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
@@ -65,5 +65,5 @@ func main() {
 		return
 	}
 
-	fmt.Println("File copied successfully to output/reconstructed.DAT.")
+	fmt.Println("File copied successfully to output/USBANLZ0000.DAT.")
 }
