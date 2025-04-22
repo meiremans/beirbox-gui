@@ -60,3 +60,4 @@
 - [@Deep-Symmetry](https://github.com/Deep-Symmetry) – for [`crate-digger`](https://github.com/Deep-Symmetry/crate-digger) and the Kaitai struct for `.DAT` parsing  
 - [@jandk](https://github.com/jandk) – for figuring out how Pioneer path hashing is generated  
 - [@bartvg](https://github.com/bartvg) – **Vettige Weust** – for listening to my bacon 🥓
+- ChatGPT for the vibe programming
