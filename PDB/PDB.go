@@ -79,7 +79,7 @@ func PDB(musicFolderOnUSB string, musicFolderOnDisk string) error {
 	defer out.Close()
 	fmt.Printf("PIONEER database created: %s\n", outputFile)
 
-	insertAllTracks(musicFolderOnDisk, lib)
+	insertAllTracks(musicFolderOnDisk, musicFolderOnUSB, lib)
 
 	fmt.Printf("Tracks marked for export: %6d used/%6d total\n", len(lib.Tracks().All()), 1)
 	fmt.Printf("Copying or encoding tracks to %s\n", *trackDir)
@@ -217,7 +217,7 @@ func PDB(musicFolderOnUSB string, musicFolderOnDisk string) error {
 
 	return nil
 }
-func insertAllTracks(musicFolderOnDisk string, lib *library.Library) error {
+func insertAllTracks(musicFolderOnDisk string, musicFolderOnUSB string, lib *library.Library) error {
 	return filepath.Walk(musicFolderOnDisk, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return err
@@ -252,6 +252,7 @@ func insertAllTracks(musicFolderOnDisk string, lib *library.Library) error {
 			Duration:    time.Duration(0), // Not all tag readers include duration
 			Title:       meta.Title(),
 			FileType:    strings.TrimPrefix(filepath.Ext(path), "."),
+			//AnalyzePath: fmt.Sprintf("/%s/%s", musicFolderOnUSB, info.Name()),
 		}
 
 		lib.InsertTrack(myTrack)

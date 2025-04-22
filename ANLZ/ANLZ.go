@@ -42,7 +42,7 @@ func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
 			}
 			fmt.Printf("Output: %s\n", output)
 
-			destinationKey := filepath.Join("PIONEER", "USBANLZ", getFolderName(filepath.Join(musicFolderOnUsb, info.Name())))
+			destinationKey := filepath.Join("PIONEER", "USBANLZ", getFolderName(filepath.Join(musicFolderOnUsb, info.Name())), "ANLZ0000.DAT")
 			destPath := filepath.Join(currentDir, destinationKey)
 
 			fmt.Printf("Copying to: %s\n", destPath)
