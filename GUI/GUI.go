@@ -3,16 +3,11 @@ package GUI
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"math/rand"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -33,23 +28,66 @@ func init() {
 	settings, err := data.LoadSettings()
 	if err != nil {
 		log.Printf("Failed to load settings: %v\n", err)
-		musicFolderOnDisk = "C:/beirbox" // Fallback
+		musicFolderOnDisk = "" // Fallback
 	} else {
 		musicFolderOnDisk = settings.MusicFolder
 	}
 }
 
-// Track holds information about a music track
-type Track struct {
-	Artist     string `json:"artist"`
-	Album      string `json:"album"`
-	BPM        int    `json:"bpm"`
-	TrackName  string `json:"track_name"`
-	AlbumCover string `json:"album_cover"`
+// Folder holds information about a music folder
+type Folder struct {
+	Path      string
+	Labels    map[string]*widget.Label
+	FileCount int
+}
 
-	labels  map[string]*widget.Label
-	iDEntry *widget.Entry
-	image   *canvas.Image
+// CountFiles counts the files in the folder
+func (f *Folder) CountFiles() {
+	fileCount := 0
+	err := filepath.Walk(f.Path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Count only files (not directories)
+		if !info.IsDir() {
+			fileCount++
+		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("Error counting files: %v\n", err)
+	}
+	f.FileCount = fileCount
+}
+
+// UpdateFolderInfo will update the UI with folder details and file count
+func (f *Folder) UpdateFolderInfo() {
+	f.CountFiles() // Update the file count
+	f.Labels["folder"].SetText(fmt.Sprintf("Current Folder: %s", f.Path))
+	f.Labels["fileCount"].SetText(fmt.Sprintf("Files in Folder: %d", f.FileCount))
+}
+
+// newLabel creates and stores a new label in the Labels map
+func (f *Folder) newLabel(name string) *widget.Label {
+	w := widget.NewLabel("")
+	f.Labels[name] = w
+	return w
+}
+
+func (f *Folder) NewForm(win fyne.Window) fyne.CanvasObject {
+	// Create folder labels and file count label
+	f.Labels = make(map[string]*widget.Label)
+	f.newLabel("folder")
+	f.newLabel("fileCount")
+	f.UpdateFolderInfo()
+
+	// Use a VBox container to layout the form content
+	form := container.NewVBox(
+		f.Labels["folder"],    // Display current folder info
+		f.Labels["fileCount"], // Display the file count in the folder
+	)
+	return form
 }
 
 type USBSelector struct {
@@ -103,16 +141,7 @@ func getUSBDrives() []string {
 	return drives
 }
 
-// NewTrack returns a new Track app
-func NewTrack() *Track {
-	rand.Seed(time.Now().UnixNano())
-	return &Track{
-		labels: make(map[string]*widget.Label),
-	}
-}
-
 func export(selectedUSB string, selectedLocalFolder string, window fyne.Window) {
-
 	usbPath := selectedUSB // e.g., "E:\\"
 	if usbPath != "" {
 		// Copy files from the selected local folder to the USB
@@ -132,17 +161,19 @@ func export(selectedUSB string, selectedLocalFolder string, window fyne.Window) 
 	}
 }
 
-func selectFolder(window fyne.Window) string {
+func selectFolder(window fyne.Window, folder *Folder) {
 	// Open a folder selection dialog
-	dialog.ShowFolderOpen(func(folder fyne.ListableURI, err error) {
-		if err == nil && folder != nil {
+	dialog.ShowFolderOpen(func(folderURI fyne.ListableURI, err error) {
+		if err == nil && folderURI != nil {
 			// Store the selected folder's URI as a string
-			fmt.Println("Selected folder:", folder.Path())
-			musicFolderOnDisk = folder.Path()
-			updateMusicFolder(musicFolderOnDisk)
+			selectedPath := folderURI.Path()
+			fmt.Println("Selected folder:", selectedPath)
+
+			// Update the Folder path and refresh the info
+			folder.Path = selectedPath
+			folder.UpdateFolderInfo()
 		}
 	}, window)
-	return ""
 }
 
 func copyDir(src, dst string) error {
@@ -188,127 +219,6 @@ func copyFile(srcFile, dstFile string) error {
 	return nil
 }
 
-// UpdateTrackInfo will update the UI with track details
-func (t *Track) UpdateTrackInfo() {
-	t.labels["artist"].SetText(fmt.Sprintf("Artist: %s", t.Artist))
-	t.labels["album"].SetText(fmt.Sprintf("Album: %s", t.Album))
-	t.labels["bpm"].SetText(fmt.Sprintf("BPM: %d", t.BPM))
-	t.labels["track_name"].SetText(fmt.Sprintf("Track: %s", t.TrackName))
-
-	if t.AlbumCover != "" {
-		t.downloadImage(t.AlbumCover)
-	}
-}
-
-// downloadImage fetches the album cover image
-func (t *Track) downloadImage(url string) {
-	response, e := http.Get(url)
-	if e != nil {
-		log.Fatal(e)
-	}
-	defer response.Body.Close()
-
-	file, err := ioutil.TempFile(os.TempDir(), "album_cover.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, response.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	t.image.File = file.Name()
-	canvas.Refresh(t.image)
-}
-
-// NewForm generates a new Track form
-func (t *Track) NewForm(w fyne.Window) fyne.Widget {
-	form := &widget.Form{}
-	tt := reflect.TypeOf(t).Elem()
-	for i := 0; i < tt.NumField(); i++ {
-		fld := tt.Field(i)
-		tag := fld.Tag.Get("json")
-		switch tag {
-		case "": // not a display field
-		case "album_cover": // special field for album cover image
-			// we created this in the setup
-		case "bpm": // special field for BPM
-			// Create labels for the track information
-			form.Append(fld.Name, t.newLabel(tag))
-		default:
-			form.Append(fld.Name, t.newLabel(tag))
-		}
-	}
-	return form
-}
-
-func (t *Track) newLabel(name string) *widget.Label {
-	w := widget.NewLabel("")
-	t.labels[name] = w
-	return w
-}
-
-// Show starts a new Track widget
-func Show(win fyne.Window) fyne.CanvasObject {
-	t := NewTrack()
-	t.image = &canvas.Image{FillMode: canvas.ImageFillOriginal}
-
-	form := t.NewForm(win)
-	usb := NewUSBSelector() // <- new USB selector
-
-	// Add the folder select button
-	selectFolderButton := widget.NewButton("Select Local Folder", func() {
-		localFolder := selectFolder(win)
-		if localFolder != "" {
-			fmt.Println("Local folder selected:", localFolder)
-		}
-	})
-
-	export := widget.NewButton("export", func() {
-		export(usb.Selected, "./music", win)
-		fmt.Println("Export to USB:", usb.Selected)
-	})
-
-	submit := widget.NewButton("Submit", func() {
-		t.UpdateTrackInfo()
-	})
-	submit.Importance = widget.HighImportance
-
-	buttons := container.NewHBox(
-		layout.NewSpacer(),
-		widget.NewButton("Random", func() {
-			t.UpdateTrackInfo()
-		}),
-		submit,
-		export,
-	)
-
-	// Add the BeirBox image
-	beirBoxImage := canvas.NewImageFromFile("./static/beirbox.png")
-	beirBoxImage.FillMode = canvas.ImageFillContain // or ImageFillOriginal depending on your needs
-
-	// Create a container for the main content (image + track image)
-	content := container.NewStack(
-		beirBoxImage,
-		t.image,
-	)
-
-	go func() {
-		t.UpdateTrackInfo()
-	}()
-
-	// Compose layout
-	return container.NewBorder(
-		form,
-		container.NewVBox(buttons, usb.Render(), selectFolderButton),
-		nil,
-		nil,
-		content, // Use the stacked container instead of just t.image
-	)
-}
-
 func updateMusicFolder(newPath string) {
 	settings, err := data.LoadSettings()
 	if err != nil {
@@ -322,4 +232,55 @@ func updateMusicFolder(newPath string) {
 	} else {
 		musicFolderOnDisk = newPath // Update in-memory variable
 	}
+}
+
+func Show(win fyne.Window) fyne.CanvasObject {
+	// Initialize a new Folder instead of Track
+	f := &Folder{Path: musicFolderOnDisk} // Path can be set to the default folder
+
+	// Create a new Form for Folder using NewForm method
+	form := f.NewForm(win)
+
+	// Modify the folder update method
+	usb := NewUSBSelector() // <- new USB selector
+
+	// Add the folder select button
+	selectFolderButton := widget.NewButton("Select Local Folder", func() {
+		selectFolder(win, f) // Pass the Folder instance to the selectFolder function
+	})
+
+	// Export functionality remains unchanged
+	export := widget.NewButton("export", func() {
+		export(usb.Selected, f.Path, win) // Use the Folder's path for export
+		fmt.Println("Export to USB:", usb.Selected)
+	})
+	export.Importance = widget.HighImportance
+
+	buttons := container.NewHBox(
+		layout.NewSpacer(),
+		export,
+	)
+
+	// Create a container for the main content (image + folder image)
+	beirBoxImage := canvas.NewImageFromFile("./static/beirbox.png")
+	beirBoxImage.FillMode = canvas.ImageFillContain
+
+	// Content for folder view
+	content := container.NewStack(
+		beirBoxImage,
+	)
+
+	// Update folder info display asynchronously
+	go func() {
+		f.UpdateFolderInfo()
+	}()
+
+	// Compose the layout for the window
+	return container.NewBorder(
+		form,
+		container.NewVBox(buttons, usb.Render(), selectFolderButton),
+		nil,
+		nil,
+		content, // Use content to show the folder's image and path
+	)
 }
