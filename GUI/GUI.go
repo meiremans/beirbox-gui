@@ -20,8 +20,14 @@ import (
 	"github.com/meiremans/beirbox-GUI/data"
 )
 
-var musicFolderOnUSB = "/music"
+var musicFolderOnUSB = "music"
 var musicFolderOnDisk string
+
+// Device holds a player model and its supported formats
+type Device struct {
+	Name    string
+	Formats []string
+}
 
 func init() {
 	// Load settings when the program starts
@@ -96,6 +102,12 @@ type USBSelector struct {
 	Select   *widget.Select
 }
 
+type TargetDeviceSelector struct {
+	Selected string
+	Label    *widget.Label
+	Select   *widget.Select
+}
+
 func NewUSBSelector() *USBSelector {
 	drives := getUSBDrives()
 	label := widget.NewLabel("Selected USB: none")
@@ -115,6 +127,10 @@ func NewUSBSelector() *USBSelector {
 }
 
 func (u *USBSelector) Render() fyne.CanvasObject {
+	return container.NewVBox(u.Select, u.Label)
+}
+
+func (u *TargetDeviceSelector) Render() fyne.CanvasObject {
 	return container.NewVBox(u.Select, u.Label)
 }
 
@@ -172,8 +188,62 @@ func selectFolder(window fyne.Window, folder *Folder) {
 			// Update the Folder path and refresh the info
 			folder.Path = selectedPath
 			folder.UpdateFolderInfo()
+			updateMusicFolder(selectedPath)
 		}
 	}, window)
+}
+
+// getDevicesList returns all supported CDJ/XDJ models and their audio formats
+func getDevicesList() []Device {
+	return []Device{
+		{"CDJ‑400", []string{"MP3 (32–320 kbps at 32/44.1/48 kHz"}},
+		{"CDJ‑350", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+		{"CDJ‑850", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+		{"CDJ‑900", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+		{"CDJ‑1000MK3", []string{"MP3", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+		{"CDJ‑2000", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+		{"CDJ‑2000NXS", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+		{"CDJ‑2000NXS2", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
+		{"CDJ‑3000", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
+		{"XDJ‑700", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+		{"XDJ‑1000", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+		{"XDJ‑XZ", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
+		{"XDJ‑RX2", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
+		{"XDJ‑RX", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC"}},
+	}
+}
+
+func targetDeviceSelector() *TargetDeviceSelector {
+	label := widget.NewLabel("Selected Device: none")
+	selector := &TargetDeviceSelector{Label: label}
+
+	devices := getDevicesList()
+
+	// build list of names for the Select widget
+	var names []string
+	for _, d := range devices {
+		names = append(names, d.Name)
+	}
+
+	selectWidget := widget.NewSelect(names, func(val string) {
+		selector.Selected = val
+		selector.Label.SetText("Selected Device: " + val)
+
+		// find the chosen device and e.g. log its formats
+		for _, d := range devices {
+			if d.Name == val {
+				fmt.Println("Supported Formats:", d.Formats)
+				// you could also display them in the UI:
+				// dialog.ShowInformation("Supported Formats",
+				//     strings.Join(d.Formats, "\n"), win)
+				break
+			}
+		}
+	})
+	selectWidget.PlaceHolder = "Choose Device"
+	selector.Select = selectWidget
+
+	return selector
 }
 
 func copyDir(src, dst string) error {
@@ -248,6 +318,7 @@ func Show(win fyne.Window) fyne.CanvasObject {
 	selectFolderButton := widget.NewButton("Select Local Folder", func() {
 		selectFolder(win, f) // Pass the Folder instance to the selectFolder function
 	})
+	targetDevice := targetDeviceSelector()
 
 	// Export functionality remains unchanged
 	export := widget.NewButton("export", func() {
@@ -260,6 +331,19 @@ func Show(win fyne.Window) fyne.CanvasObject {
 		layout.NewSpacer(),
 		export,
 	)
+
+	// Checkbox for Real DJ Mode
+	realDJMode := widget.NewCheck("Real DJ Mode", func(checked bool) {
+		fmt.Println("Real DJ Mode:", checked)
+		// You can store this state or trigger some behavior here
+	})
+
+	// Info icon (as a button with "?") with a hover-like dialog
+	infoButton := widget.NewButton("?", func() {
+		dialog.ShowInformation("Real DJ Mode", "No waveforms or BPM on the CDJ", win)
+	})
+	infoButton.Importance = widget.LowImportance
+	infoRow := container.NewHBox(realDJMode, infoButton)
 
 	// Create a container for the main content (image + folder image)
 	beirBoxImage := canvas.NewImageFromFile("./static/beirbox.png")
@@ -278,7 +362,7 @@ func Show(win fyne.Window) fyne.CanvasObject {
 	// Compose the layout for the window
 	return container.NewBorder(
 		form,
-		container.NewVBox(buttons, usb.Render(), selectFolderButton),
+		container.NewVBox(buttons, usb.Render(), targetDevice.Render(), infoRow, selectFolderButton),
 		nil,
 		nil,
 		content, // Use content to show the folder's image and path

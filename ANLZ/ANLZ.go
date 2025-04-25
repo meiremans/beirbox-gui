@@ -31,8 +31,8 @@ func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
 
 			// Run the script
 			scriptPath := filepath.Join(currentDir, "ANLZ", "node", "analyseNewTrack.js")
-			trackPath := filepath.Join(musicFolderOnUsb, info.Name())
-			cmd := exec.Command(nodepath, scriptPath, path, trackPath)
+			//trackPath := filepath.Join(musicFolderOnUsb, info.Name())
+			cmd := exec.Command(nodepath, scriptPath, "/music/testsong.mp3")
 			cmd.Dir = filepath.Join(currentDir, "ANLZ", "node")
 
 			output, err := cmd.CombinedOutput()
@@ -42,7 +42,7 @@ func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
 			}
 			fmt.Printf("Output: %s\n", output)
 
-			destinationKey := filepath.Join("PIONEER", "USBANLZ", getFolderName(filepath.Join(musicFolderOnUsb, info.Name())))
+			destinationKey := filepath.Join("PIONEER", "USBANLZ", getFolderName(filepath.Join(musicFolderOnUsb, info.Name())), "ANLZ0000.DAT")
 			destPath := filepath.Join(currentDir, destinationKey)
 
 			fmt.Printf("Copying to: %s\n", destPath)
