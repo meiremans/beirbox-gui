@@ -292,7 +292,16 @@ function rebuildAnlzFile(anlz, outputPath) {
 function writeNewTrack (filePathOnUsb){
     const parsed = parseAnlzFile("./startfile.DAT")
     filePath = filePathOnUsb;
+    console.log("FILEPATH");
+    console.log(filePath);
     rebuildAnlzFile(parsed, './reconstructed.anlz');
     parseAnlzFile("./reconstructed.anlz");
 }
-writeNewTrack(filePath);
+
+module.exports = writeNewTrack
+
+if (require.main === module) {
+    // Directly run from CLI
+    const filePath = process.argv[2];
+    writeNewTrack(filePath);
+  }

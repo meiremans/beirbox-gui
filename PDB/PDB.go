@@ -235,8 +235,10 @@ func insertAllTracks(musicFolderOnDisk string, musicFolderOnUSB string, lib *lib
 		}
 		trackNum, _ := meta.Track()
 		fileSize := info.Size()
+		trackName := info.Name()
+		trackPath := fmt.Sprintf("%s/%s", musicFolderOnUSB, trackName)
 		myTrack := &library.Track{
-			Path:        path,
+			Path:        trackPath,
 			FileSize:    int(fileSize),
 			Bitrate:     320, // You may calculate or parse this if needed
 			SampleDepth: 16,  // Typically 16-bit for MP3
@@ -252,7 +254,6 @@ func insertAllTracks(musicFolderOnDisk string, musicFolderOnUSB string, lib *lib
 			Duration:    time.Duration(0), // Not all tag readers include duration
 			Title:       meta.Title(),
 			FileType:    strings.TrimPrefix(filepath.Ext(path), "."),
-			//AnalyzePath: fmt.Sprintf("/%s/%s", musicFolderOnUSB, info.Name()),
 		}
 
 		lib.InsertTrack(myTrack)
