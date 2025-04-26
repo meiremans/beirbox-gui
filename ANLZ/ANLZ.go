@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/meiremans/beirbox-GUI/analysis"
 )
 
 func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
@@ -28,10 +30,11 @@ func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
 		}
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".mp3") {
 			fmt.Printf("Processing: %s\n", path)
+			//first the analysis
+			analysis.RunAnalysis(path)
 
 			// Run the script
-			scriptPath := filepath.Join(currentDir, "ANLZ", "node", "analyseNewTrack.js")
-			//trackPath := filepath.Join(musicFolderOnUsb, info.Name())
+			scriptPath := filepath.Join(currentDir, "ANLZ", "node", "run.js")
 			cmd := exec.Command(nodepath, scriptPath, "/music/testsong.mp3")
 			cmd.Dir = filepath.Join(currentDir, "ANLZ", "node")
 
@@ -43,20 +46,30 @@ func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
 			fmt.Printf("Output: %s\n", output)
 
 			destinationKey := filepath.Join("PIONEER", "USBANLZ", getFolderName(filepath.Join(musicFolderOnUsb, info.Name())), "ANLZ0000.DAT")
+			destinationKeyEXT := filepath.Join("PIONEER", "USBANLZ", getFolderName(filepath.Join(musicFolderOnUsb, info.Name())), "ANLZ0000.EXT")
 			destPath := filepath.Join(currentDir, destinationKey)
+			destPathEXT := filepath.Join(currentDir, destinationKeyEXT)
 
 			fmt.Printf("Copying to: %s\n", destPath)
+			fmt.Printf("Copying to: %s\n", destPathEXT)
 
 			// Ensure output directory exists
 			if err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
 				fmt.Printf("Failed to create output directory: %v\n", err)
 				return err
 			}
+			// Ensure output directory exists
+			if err := os.MkdirAll(filepath.Dir(destinationKeyEXT), os.ModePerm); err != nil {
+				fmt.Printf("Failed to create output directory: %v\n", err)
+				return err
+			}
 
 			// Copy reconstructed.anlz to the final destination
-			srcPath := filepath.Join(currentDir, "ANLZ", "node", "reconstructed.anlz")
+			srcPath := filepath.Join(currentDir, "ANLZ", "node", "ANLZ0000.dat")
+			srcPathEXT := filepath.Join(currentDir, "ANLZ", "node", "ANLZ0000.ext")
 
 			srcFile, err := os.Open(srcPath)
+			srcFileEXT, err := os.Open(srcPathEXT)
 			if err != nil {
 				fmt.Printf("Failed to open source file: %v\n", err)
 				return err
@@ -69,8 +82,15 @@ func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
 				return err
 			}
 			defer destFile.Close()
+			destFileEXT, err := os.Create(destPathEXT)
+			if err != nil {
+				fmt.Printf("Failed to create destination file: %v\n", err)
+				return err
+			}
+			defer destFileEXT.Close()
 
 			_, err = io.Copy(destFile, srcFile)
+			_, err = io.Copy(destFileEXT, srcFileEXT)
 			if err != nil {
 				fmt.Printf("Failed to copy file: %v\n", err)
 				return err

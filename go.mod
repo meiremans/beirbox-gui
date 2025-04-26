@@ -9,11 +9,13 @@ require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/ambientsound/rex v0.0.0-20231005163953-e9294f844f1e // indirect
+	github.com/bogem/id3v2 v1.2.0 // indirect
 	github.com/cheggaaa/pb v1.0.29 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dhowden/tag v0.0.0-20240417053706-3d75831295e8 // indirect
 	github.com/ebitengine/purego v0.4.1 // indirect
+	github.com/faiface/beep v1.1.0 // indirect
 	github.com/fredbi/uri v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fyne-io/gl-js v0.1.0 // indirect
@@ -34,6 +36,7 @@ require (
 	github.com/gotracker/playback v1.1.0 // indirect
 	github.com/hack-pad/go-indexeddb v0.3.2 // indirect
 	github.com/hack-pad/safejs v0.1.0 // indirect
+	github.com/hajimehoshi/go-mp3 v0.3.0 // indirect
 	github.com/hajimehoshi/oto v1.0.1 // indirect
 	github.com/hajimehoshi/oto/v2 v2.4.2 // indirect
 	github.com/hashicorp/go-envparse v0.1.0 // indirect
@@ -53,6 +56,7 @@ require (
 	github.com/mewkiz/pkg v0.0.0-20231012081350-95d6616c5403 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/nicksnyder/go-i18n/v2 v2.5.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quasilyte/xm v0.0.0-20240228102732-966acb9af598 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
