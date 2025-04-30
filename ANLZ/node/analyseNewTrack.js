@@ -1,6 +1,9 @@
 const fs = require('fs');
 const parseAnlzFile = require("./kaitai-test");
+const {extname} = require("node:path");
+const id3 = require('node-id3');
 let filePath = null; //TODO: dirty shit
+let filePathOnDisk = null; //TODO: dirty shit
 
 
 const buildUInt32BE = (value) => {
@@ -144,22 +147,45 @@ function buildCueExtended(body) {
  *     Not based on total samples or time exactly — it's more like:
  *         "Compress the whole song into ~780 vertical bars of loudness"
  */
-function buildBigWave(body) {
-    //let { entries } = body;
-    let entries;
-    // Convert Uint8Array to Buffer if needed
-    if (entries instanceof Uint8Array && !(entries instanceof Buffer)) {
-        entries = Buffer.from(entries);
 
-    }else       // Create 780 bytes with a sine pattern (values between 0 and 255)
-        entries = Buffer.alloc(780);
-    for (let i = 0; i < 780; i++) {
-        const sineVal = Math.round(128 + 127 * Math.sin((i / 780) * 2 * Math.PI * 3)); // 3 sine waves
-        entries[i] = sineVal;
+function buildBigWave(body) {
+    let entries;
+
+    const ext = extname(filePathOnDisk).toLowerCase();
+    if (ext === '.mp3') {
+        // Read from ID3 tag
+        const tags = id3.read(filePathOnDisk);
+        if (tags.userDefinedText) {
+            const waveformTag = tags.userDefinedText.find(t => t.description === 'WAVEFORM');
+            if (waveformTag) {
+                entries = Buffer.from(JSON.parse(waveformTag.value));
+            }
+        }
+    }
+
+    if (!entries) {
+        entries = Buffer.alloc(7200);
+
+        for (let i = 0; i < 7200; i++) {
+            // Generate a sine wave as a fallback or use your logic for actual waveform data
+            const sineVal = Math.round(128 + 127 * Math.sin((i / 7200) * 2 * Math.PI * 3));
+
+            // Encode the height in the low-order 5 bits (0 to 31)
+            const height = Math.abs(sineVal) % 32;  // Ensure height is between 0 and 31
+
+            // Encode the whiteness in the high-order 3 bits (0 to 7)
+            const whiteness = Math.abs(Math.round(sineVal / 128)); // Normalize sineVal to 0 or 1 (whiteness factor)
+
+            // Combine the height and whiteness into a single byte
+            const encodedByte = (whiteness << 5) | height;  // Shifting whiteness to the high-order 3 bits and OR'ing with height
+
+            // Store the encoded value in the waveform
+            entries[i] = encodedByte;
+        }
     }
 
     if (!Buffer.isBuffer(entries)) {
-        throw new Error('Expected body.entries to be a Buffer or Uint8Array');
+        throw new Error('Expected entries to be a Buffer or Uint8Array');
     }
 
     const len_entry_bytes = 1;
@@ -242,9 +268,12 @@ function buildBeatGrid(body) {
 
 function buildTinyWavePreview(body) {
     let { data, len_tag = 0, len_header = 8 } = body;
-
+    const choices = [1, 2, 15];
     // Ensure data is a Buffer
     if (data instanceof Uint8Array && !(data instanceof Buffer)) {
+        for (let i = 0; i < 100; i++) {
+            data[i] = choices[Math.floor(Math.random() * choices.length)];
+        }
         data = Buffer.from(data);
     }
 
@@ -399,8 +428,11 @@ function rebuildAnlzFile(anlz, outputPath) {
     console.log(`✅ Wrote rebuilt file to ${outputPath}`);
 }
 
-function writeNewTrack (filePathOnUsb){
+function writeNewTrack (filePathOnUsb, fullPathOnDisk){
+    console.log(filePathOnUsb)
+    console.log(fullPathOnDisk)
     filePath = filePathOnUsb;
+    filePathOnDisk = fullPathOnDisk
     const parsedDAT = parseAnlzFile("./startfile.DAT")
     rebuildAnlzFile(parsedDAT, './ANLZ0000.DAT');
     parseAnlzFile("./ANLZ0000.DAT");

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"path"
+
 	"github.com/meiremans/beirbox-GUI/analysis"
 )
 
@@ -24,24 +26,30 @@ func ANLZ(musicFolderOnUsb string, musicFolderOnDisk string) {
 		return
 	}
 
-	err = filepath.Walk(musicFolderOnDisk, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(musicFolderOnDisk, func(pathOnDisk string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".mp3") {
-			fmt.Printf("Processing: %s\n", path)
+			fmt.Printf("Processing: %s\n", pathOnDisk)
 			//first the analysis
-			analysis.RunAnalysis(path)
+			analysis.RunAnalysis(pathOnDisk)
 
 			// Run the script
 			scriptPath := filepath.Join(currentDir, "ANLZ", "node", "run.js")
-			cmd := exec.Command(nodepath, scriptPath, "/music/testsong.mp3")
+			fmt.Println("Command:", filepath.Join(musicFolderOnDisk, info.Name()))
+			trackOnUsb := path.Join("/", musicFolderOnUsb, info.Name())
+
+			cmd := exec.Command(nodepath, scriptPath, trackOnUsb, filepath.Join(musicFolderOnDisk, info.Name()))
 			cmd.Dir = filepath.Join(currentDir, "ANLZ", "node")
 
 			output, err := cmd.CombinedOutput()
 			if err != nil {
-				fmt.Printf("Error running Node.js script for %s: %v\n", path, err)
+				fmt.Printf("Error running Node.js script for %s: %v\n", pathOnDisk, err)
+				fmt.Println("Output from Node.js script:")
+				fmt.Println(string(output)) // Show any error messages from Node.js
 				return err
+
 			}
 			fmt.Printf("Output: %s\n", output)
 

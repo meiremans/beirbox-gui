@@ -196,20 +196,23 @@ func selectFolder(window fyne.Window, folder *Folder) {
 // getDevicesList returns all supported CDJ/XDJ models and their audio formats
 func getDevicesList() []Device {
 	return []Device{
+		// currently only MP3 supported
 		{"CDJ‑400", []string{"MP3 (32–320 kbps at 32/44.1/48 kHz"}},
-		{"CDJ‑350", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
-		{"CDJ‑850", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
-		{"CDJ‑900", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
-		{"CDJ‑1000MK3", []string{"MP3", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
-		{"CDJ‑2000", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
-		{"CDJ‑2000NXS", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
-		{"CDJ‑2000NXS2", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
-		{"CDJ‑3000", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
-		{"XDJ‑700", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
-		{"XDJ‑1000", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
-		{"XDJ‑XZ", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
-		{"XDJ‑RX2", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
-		{"XDJ‑RX", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC"}},
+		/*
+			{"CDJ‑350", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+			{"CDJ‑850", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+			{"CDJ‑900", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+			{"CDJ‑1000MK3", []string{"MP3", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+			{"CDJ‑2000", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+			{"CDJ‑2000NXS", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+			{"CDJ‑2000NXS2", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
+			{"CDJ‑3000", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
+			{"XDJ‑700", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+			{"XDJ‑1000", []string{"MP3", "AAC", "WAV", "AIFF (16/24‑bit at 44.1/48 kHz)"}},
+			{"XDJ‑XZ", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
+			{"XDJ‑RX2", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC", "ALAC (lossless up to 96 kHz)"}},
+			{"XDJ‑RX", []string{"MP3", "AAC", "WAV", "AIFF", "FLAC"}},
+		*/
 	}
 }
 

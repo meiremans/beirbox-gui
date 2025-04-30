@@ -3,8 +3,8 @@ const writeNewTrack = require("./analyseNewTrack");
 
 if (require.main === module) {
     // Directly run from CLI
-    const filePath = process.argv[2];
-    writeNewTrack(filePath);
+    const args = process.argv.slice(2);
+    writeNewTrack( ...args);
 }
 
 
