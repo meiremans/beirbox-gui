@@ -1,6 +1,9 @@
 const fs = require('fs');
 const parseAnlzFile = require("./kaitai-test");
+const {extname} = require("node:path");
+const id3 = require('node-id3');
 let filePath = null; //TODO: dirty shit
+let filePathOnDisk = null; //TODO: dirty shit
 
 
 const buildUInt32BE = (value) => {
@@ -56,11 +59,144 @@ function buildSectionBody(fourcc, body) {
             return buildWavePreview(body);
         case 'PWV2':
             return buildTinyWavePreview(body);
-        // add more cases as needed
+        case 'PWV3': return buildBigWave(body);
+        case 'PCO2': return buildCueExtended(body);
+        case 'PWV5': return buildWaveColorScroll(body);
+        case 'PWV4': return buildWaveColorPreview(body);
+        case 'PQT2': return buildBigWave(body);
         default:
             console.warn(`Unhandled section fourcc: ${fourcc}`);
             return body.raw || Buffer.alloc(0);
     }
+}
+
+function buildWaveColorScroll(body) {
+    let { entries } = body;
+
+    if (entries instanceof Uint8Array && !(entries instanceof Buffer)) {
+        entries = Buffer.from(entries);
+    }
+
+    if (!Buffer.isBuffer(entries)) {
+        throw new Error('Expected body.entries to be a Buffer or Uint8Array');
+    }
+
+    const len_entry_bytes = 2;
+    const len_entries = entries.length / len_entry_bytes;
+
+    const header = Buffer.alloc(12);
+    header.writeUInt32BE(len_entry_bytes, 0);
+    header.writeUInt32BE(len_entries, 4);
+    header.writeUInt32BE(0x960000, 8);
+
+    return Buffer.concat([header, entries]);
+}
+
+function buildWaveColorPreview(body) {
+    let { entries } = body;
+
+    if (entries instanceof Uint8Array && !(entries instanceof Buffer)) {
+        entries = Buffer.from(entries);
+    }
+
+    if (!Buffer.isBuffer(entries)) {
+        throw new Error('Expected body.entries to be a Buffer or Uint8Array');
+    }
+
+    const len_entry_bytes = 6;
+    const len_entries = entries.length / len_entry_bytes;
+
+    const header = Buffer.alloc(12);
+    header.writeUInt32BE(len_entry_bytes, 0);
+    header.writeUInt32BE(len_entries, 4);
+    header.writeUInt32BE(0x960000, 8);
+
+    return Buffer.concat([header, entries]);
+}
+
+
+
+function buildCueExtended(body) {
+    let { type, cues } = body;
+
+    if (!Array.isArray(cues)) {
+        throw new Error('Expected body.cues to be an array');
+    }
+
+    const num_cues = cues.length;
+
+    const cueBuffers = cues.map(cue => {
+        if (!(cue instanceof Buffer)) {
+            throw new Error('Each cue should be a Buffer');
+        }
+        return cue;
+    });
+
+    const header = Buffer.alloc(8);
+    header.writeUInt32BE(type, 0);      // cue type
+    header.writeUInt16BE(num_cues, 4);  // number of cues
+    header.writeUInt16BE(0, 6);         // padding / reserved
+
+    return Buffer.concat([header, ...cueBuffers]);
+}
+
+/**
+ * The Big Wave is a low-res representation, usually:
+ *     1 byte per "slice" (volume level)
+ *     Fixed length for most tracks (~780 bytes)
+ *     Not based on total samples or time exactly — it's more like:
+ *         "Compress the whole song into ~780 vertical bars of loudness"
+ */
+
+function buildBigWave(body) {
+    let entries;
+
+    const ext = extname(filePathOnDisk).toLowerCase();
+    if (ext === '.mp3') {
+        // Read from ID3 tag
+        const tags = id3.read(filePathOnDisk);
+        if (tags.userDefinedText) {
+            const waveformTag = tags.userDefinedText.find(t => t.description === 'WAVEFORM');
+            if (waveformTag) {
+                entries = Buffer.from(JSON.parse(waveformTag.value));
+            }
+        }
+    }
+
+    if (!entries) {
+        entries = Buffer.alloc(7200);
+
+        for (let i = 0; i < 7200; i++) {
+            // Generate a sine wave as a fallback or use your logic for actual waveform data
+            const sineVal = Math.round(128 + 127 * Math.sin((i / 7200) * 2 * Math.PI * 3));
+
+            // Encode the height in the low-order 5 bits (0 to 31)
+            const height = Math.abs(sineVal) % 32;  // Ensure height is between 0 and 31
+
+            // Encode the whiteness in the high-order 3 bits (0 to 7)
+            const whiteness = Math.abs(Math.round(sineVal / 128)); // Normalize sineVal to 0 or 1 (whiteness factor)
+
+            // Combine the height and whiteness into a single byte
+            const encodedByte = (whiteness << 5) | height;  // Shifting whiteness to the high-order 3 bits and OR'ing with height
+
+            // Store the encoded value in the waveform
+            entries[i] = encodedByte;
+        }
+    }
+
+    if (!Buffer.isBuffer(entries)) {
+        throw new Error('Expected entries to be a Buffer or Uint8Array');
+    }
+
+    const len_entry_bytes = 1;
+    const len_entries = entries.length;
+
+    const header = Buffer.alloc(12);
+    header.writeUInt32BE(len_entry_bytes, 0);     // len_entry_bytes
+    header.writeUInt32BE(len_entries, 4);         // len_entries
+    header.writeUInt32BE(0x960000, 8);            // constant
+
+    return Buffer.concat([header, entries]);
 }
 // Helper function to convert string to UTF-16 Big Endian with zero-padding to the given length
 function stringToUTF16BE(str, targetLengthInBytes) {
@@ -132,9 +268,12 @@ function buildBeatGrid(body) {
 
 function buildTinyWavePreview(body) {
     let { data, len_tag = 0, len_header = 8 } = body;
-
+    const choices = [1, 2, 15];
     // Ensure data is a Buffer
     if (data instanceof Uint8Array && !(data instanceof Buffer)) {
+        for (let i = 0; i < 100; i++) {
+            data[i] = choices[Math.floor(Math.random() * choices.length)];
+        }
         data = Buffer.from(data);
     }
 
@@ -289,19 +428,17 @@ function rebuildAnlzFile(anlz, outputPath) {
     console.log(`✅ Wrote rebuilt file to ${outputPath}`);
 }
 
-function writeNewTrack (filePathOnUsb){
-    const parsed = parseAnlzFile("./startfile.DAT")
+function writeNewTrack (filePathOnUsb, fullPathOnDisk){
+    console.log(filePathOnUsb)
+    console.log(fullPathOnDisk)
     filePath = filePathOnUsb;
-    console.log("FILEPATH");
-    console.log(filePath);
-    rebuildAnlzFile(parsed, './reconstructed.anlz');
-    parseAnlzFile("./reconstructed.anlz");
+    filePathOnDisk = fullPathOnDisk
+    const parsedDAT = parseAnlzFile("./startfile.DAT")
+    rebuildAnlzFile(parsedDAT, './ANLZ0000.DAT');
+    parseAnlzFile("./ANLZ0000.DAT");
+    const parsedEXT = parseAnlzFile("./ANLZ0000V5.EXT")
+    rebuildAnlzFile(parsedEXT, './ANLZ0000.EXT');
+    parseAnlzFile("./ANLZ0000.EXT");
 }
 
 module.exports = writeNewTrack
-
-if (require.main === module) {
-    // Directly run from CLI
-    const filePath = process.argv[2];
-    writeNewTrack(filePath);
-  }
