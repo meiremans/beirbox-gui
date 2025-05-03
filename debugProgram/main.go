@@ -33,33 +33,24 @@ func serveHTML(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "index.html")
 }
 
-// Handler to serve the JSON data for the actual waveform
-func serveExpectedWaveform(w http.ResponseWriter, r *http.Request) {
-	expectedWaveform, err := getWaveformData("C:\\Users\\nelu\\cursor\\beirbox-gui\\analysis\\testData\\rekordboxWaveForm.json")
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error loading actual waveform: %v", err), http.StatusInternalServerError)
-		return
+func serveWaveform(path string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		waveform, err := getWaveformData(path)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error loading waveform: %v", err), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(waveform)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(expectedWaveform)
-}
-
-// Handler to serve the JSON data for the expected waveform
-func serveActualWaveform(w http.ResponseWriter, r *http.Request) {
-	actualWaveform, err := getWaveformData("C:\\Users\\nelu\\cursor\\beirbox-gui\\analysis\\actual_waveform.json")
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error loading expected waveform: %v", err), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(actualWaveform)
 }
 
 func main() {
 	// Serve static files (like HTML, JS)
 	http.HandleFunc("/", serveHTML)
-	http.HandleFunc("/actual", serveActualWaveform)
-	http.HandleFunc("/expected", serveExpectedWaveform)
+	http.HandleFunc("/actual", serveWaveform("C:\\Users\\nelu\\cursor\\beirbox-gui\\analysis\\actual_waveform.json"))
+	http.HandleFunc("/expected", serveWaveform("C:\\Users\\nelu\\cursor\\beirbox-gui\\analysis\\testData\\rekordboxWaveForm.json"))
+	http.HandleFunc("/tiny_expected", serveWaveform("C:\\Users\\nelu\\cursor\\beirbox-gui\\analysis\\testData\\rekordboxWaveFormTiny.json"))
 
 	// Start the server on port 8080
 	fmt.Println("Starting server on http://localhost:8080...")
