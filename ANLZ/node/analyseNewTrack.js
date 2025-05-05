@@ -56,13 +56,15 @@ function buildSectionBody(fourcc, body) {
         case 'PVBR':
             return buildVariableBitRate(body);
         case 'PWAV':
-            return buildWavePreview(body);
+            return buildSmallWave(body);
         case 'PWV2':
             return buildTinyWavePreview(body);
+        //RX 2 USES PWV3 FOR SCROLL WAVE
         case 'PWV3': return buildBigWave(body);
         case 'PCO2': return buildCueExtended(body);
         case 'PWV5': return buildWaveColorScroll(body);
-        case 'PWV4': return buildWaveColorPreview(body);
+        //RX 2 USES PWV4 FOR SMALL WAVE
+        case 'PWV4': return buildSmallWave(body);
         case 'PQT2': return buildBigWave(body);
         default:
             console.warn(`Unhandled section fourcc: ${fourcc}`);
@@ -140,6 +142,50 @@ function buildCueExtended(body) {
     return Buffer.concat([header, ...cueBuffers]);
 }
 
+function buildSmallWave(body) {
+    let entries = Buffer.alloc(1200 * 6); // 7200 bytes
+    const ext = extname(filePathOnDisk).toLowerCase();
+    if (ext === '.mp3') {
+        // Read from ID3 tag
+        const tags = id3.read(filePathOnDisk);
+        if (tags.userDefinedText) {
+            const waveformTag = tags.userDefinedText.find(t => t.description === 'WAVEFORM');
+            if (waveformTag) {
+                entries = convertPWV3ToLegacy(Buffer.from(JSON.parse(waveformTag.value)));
+            }
+        }
+    }
+
+
+
+
+    const header = Buffer.alloc(12);
+    header.writeUInt32BE(6, 0);         // bytes per entry
+    header.writeUInt32BE(1200, 4);      // total entries
+    header.writeUInt32BE(0x960000, 8);  // constant
+
+    return Buffer.concat([header, entries]);
+}
+
+function convertPWV3ToLegacy(pwv3Buffer) {
+    const inputLen = pwv3Buffer.length;
+    const targetColumns = 1200;
+    const channels = 6;
+    const entries = Buffer.alloc(targetColumns * channels);
+
+    const samplingRate = inputLen / targetColumns;
+
+    for (let i = 0; i < targetColumns; i++) {
+        const index = Math.floor(i * samplingRate); 
+        const sample = pwv3Buffer[index] || 0; // Avoid undefined
+        for (let ch = 0; ch < channels; ch++) {
+            entries[i * channels + ch] = sample;
+        }
+    }
+
+    return entries; // this will be exactly 7200 bytes
+}
+
 /**
  * The Big Wave is a low-res representation, usually:
  *     1 byte per "slice" (volume level)
@@ -165,20 +211,15 @@ function buildBigWave(body) {
 
     if (!entries) {
         entries = Buffer.alloc(7200);
-
         for (let i = 0; i < 7200; i++) {
             // Generate a sine wave as a fallback or use your logic for actual waveform data
             const sineVal = Math.round(128 + 127 * Math.sin((i / 7200) * 2 * Math.PI * 3));
-
             // Encode the height in the low-order 5 bits (0 to 31)
             const height = Math.abs(sineVal) % 32;  // Ensure height is between 0 and 31
-
             // Encode the whiteness in the high-order 3 bits (0 to 7)
             const whiteness = Math.abs(Math.round(sineVal / 128)); // Normalize sineVal to 0 or 1 (whiteness factor)
-
             // Combine the height and whiteness into a single byte
             const encodedByte = (whiteness << 5) | height;  // Shifting whiteness to the high-order 3 bits and OR'ing with height
-
             // Store the encoded value in the waveform
             entries[i] = encodedByte;
         }
