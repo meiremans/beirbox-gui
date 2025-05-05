@@ -12,6 +12,7 @@ import (
 
 func GenerateWaveform(filepath string, sampleCount int, saveToId3 bool) ([]uint8, error) {
 
+	tinyWaveform, err := GenerateTinyWaveform() //temp, to check logic
 	file, err := os.Open(filepath)
 	if err != nil {
 		return nil, err
@@ -79,7 +80,7 @@ func GenerateWaveform(filepath string, sampleCount int, saveToId3 bool) ([]uint8
 	}
 	if saveToId3 {
 		file.Close()
-		filemanipulation.SaveWaveformToID3(filepath, waveform)
+		filemanipulation.SaveWaveformToID3(filepath, waveform, tinyWaveform)
 	}
 
 	return waveform, nil

@@ -12,7 +12,7 @@ import (
 	"github.com/bogem/id3v2"
 )
 
-func processTempFile(tempPath string, waveform []uint8) error {
+func processTempFile(tempPath string, waveform []uint8, tinyWaveform []uint8) error {
 	// Isolated processing function ensures tag gets closed
 	tag, err := id3v2.Open(tempPath, id3v2.Options{Parse: true})
 	if err != nil {
@@ -24,6 +24,10 @@ func processTempFile(tempPath string, waveform []uint8) error {
 	if err != nil {
 		return err
 	}
+	tinyWaveformJSON, err := json.Marshal(tinyWaveform)
+	if err != nil {
+		return err
+	}
 
 	tag.DeleteFrames("TXXXX")
 	tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
@@ -31,11 +35,16 @@ func processTempFile(tempPath string, waveform []uint8) error {
 		Description: "WAVEFORM",
 		Value:       string(waveformJSON),
 	})
+	tag.AddUserDefinedTextFrame(id3v2.UserDefinedTextFrame{
+		Encoding:    id3v2.EncodingUTF8,
+		Description: "TINYWAVEFORM",
+		Value:       string(tinyWaveformJSON),
+	})
 
 	return tag.Save()
 }
 
-func SaveWaveformToID3(filepathString string, waveform []uint8) error {
+func SaveWaveformToID3(filepathString string, waveform []uint8, tinyWaveform []uint8) error {
 	// 1. Generate temp file path in system temp directory
 	tempDir := os.TempDir()
 	tempFileName := fmt.Sprintf("~temp-%d-%s", time.Now().UnixNano(), filepath.Base(filepathString))
@@ -58,7 +67,7 @@ func SaveWaveformToID3(filepathString string, waveform []uint8) error {
 	}
 
 	// Stage 2: Process temp fileb
-	if err := processTempFile(tempPath, waveform); err != nil {
+	if err := processTempFile(tempPath, waveform, tinyWaveform); err != nil {
 		finalErr = fmt.Errorf("processing failed: %v", err)
 		return finalErr
 	}

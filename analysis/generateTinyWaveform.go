@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func generateTinyWaveform() ([6][1200]byte, error) {
+func GenerateTinyWaveform() ([6][1200]byte, error) {
 	// Open the JSON file
 	file, err := os.Open("actual_tiny_waveform.json")
 	var empty [6][1200]byte
