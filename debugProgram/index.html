@@ -28,39 +28,87 @@
 <div class="label">Expected Waveform</div>
 <canvas id="expectedCanvas" width="1000" height="100"></canvas>
 
+<div class="label">Tiny Actual Waveform Channels</div>
+<div id="tinyActualContainer"></div>
+
+<div class="label">Tiny Expected Waveform Channels</div>
+<div id="tinyExpectedContainer"></div>
+
 <script>
-    async function loadData() {
-        // Fetch the waveform data from the backend
-        const actualRes = await fetch('/actual');
-        const expectedRes = await fetch('/expected');
+async function loadData() {
+    const actualRes = await fetch('/actual');
+    const expectedRes = await fetch('/expected');
+    const tinyActualRes = await fetch('/tiny_actual');
+    const tinyExpectedRes = await fetch('/tiny_expected');
 
-        const actual = await actualRes.json();
-        const expected = await expectedRes.json();
+    const actual = await actualRes.json();
+    const expected = await expectedRes.json();
+    const tinyActual = await tinyActualRes.json();
+    const tinyExpected = await tinyExpectedRes.json();
 
-        const actualArray = Object.values(actual);
-        const expectedArray = Object.values(expected);
+    const actualArray = Object.values(actual);
+    const expectedArray = Object.values(expected);
 
-        drawWaveform('actualCanvas', actualArray);
-        drawWaveform('expectedCanvas', expectedArray);
+    drawWaveform('actualCanvas', actualArray);
+    drawWaveform('expectedCanvas', expectedArray);
+
+    drawMultiChannel('tinyActualContainer', tinyActual);
+    drawMultiChannel('tinyExpectedContainer', tinyExpected);
+}
+
+
+function drawWaveform(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const maxHeight = 31;
+    const columnWidth = canvas.width / data.length;
+
+    for (let i = 0; i < data.length; i++) {
+        const byte = data[i];
+        const height = byte & 0x1F;
+        const whiteness = (byte >> 5) & 0x07;
+
+        const h = 220;
+        const s = 100 - whiteness * 10;
+        const l = 50 + whiteness * 5;
+        const color = `hsl(${h}, ${s}%, ${l}%)`;
+
+        const columnHeight = (height / maxHeight) * canvas.height;
+
+        ctx.fillStyle = color;
+        ctx.fillRect(i * columnWidth, canvas.height - columnHeight, columnWidth, columnHeight);
     }
+}
 
-    function drawWaveform(canvasId, data) {
-        const canvas = document.getElementById(canvasId);
+function drawMultiChannel(containerId, channelData) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = ''; // Clear previous canvases
+
+    for (let ch = 0; ch < 6; ch++) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1200;
+        canvas.height = 100;
+        canvas.style.border = '1px solid #ccc';
+        canvas.style.marginBottom = '10px';
+        canvas.id = `${containerId}_canvas_${ch}`;
+        container.appendChild(canvas);
+
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const maxHeight = 31; // from 5-bit height
-        const columnWidth = canvas.width / data.length;
+        const maxHeight = 31;
+        const columnWidth = canvas.width / channelData[ch].length;
 
-        for (let i = 0; i < data.length; i++) {
-            const byte = data[i];
+        for (let i = 0; i < channelData[ch].length; i++) {
+            const byte = channelData[ch][i];
+            const height = byte & 0x1F;
+            const whiteness = (byte >> 5) & 0x07;
 
-            const height = byte & 0x1F;             // bits 0–4
-            const whiteness = (byte >> 5) & 0x07;   // bits 5–7
-
-            const h = 220; // blue hue
-            const s = 100 - whiteness * 10; // decrease saturation for more whiteness
-            const l = 50 + whiteness * 5;   // increase lightness for more whiteness
+            const h = 220;
+            const s = 100 - whiteness * 10;
+            const l = 50 + whiteness * 5;
             const color = `hsl(${h}, ${s}%, ${l}%)`;
 
             const columnHeight = (height / maxHeight) * canvas.height;
@@ -69,6 +117,7 @@
             ctx.fillRect(i * columnWidth, canvas.height - columnHeight, columnWidth, columnHeight);
         }
     }
+}
 
     loadData();
 </script>
